@@ -17,7 +17,7 @@ struct StrategyListView: View {
                     )
                 } else {
                     ForEach(strategies) { strategy in
-                        NavigationLink(destination: StrategyDetailView(strategy: strategy)) {
+                        NavigationLink(destination: StrategyBuilderView(strategy: strategy)) {
                             strategyRow(strategy)
                         }
                     }

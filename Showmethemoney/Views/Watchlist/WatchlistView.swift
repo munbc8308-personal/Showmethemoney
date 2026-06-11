@@ -97,17 +97,19 @@ struct WatchlistView: View {
 
         await withTaskGroup(of: (String, StockPrice?).self) { group in
             for stock in stocks {
+                let symbol = stock.symbol
+                let isKorean = stock.market.isKorean
                 group.addTask {
                     do {
                         let price: StockPrice
-                        if stock.market.isKorean {
-                            price = try await KISAPIClient.shared.fetchStockPrice(symbol: stock.symbol)
+                        if isKorean {
+                            price = try await KISAPIClient.shared.fetchStockPrice(symbol: symbol)
                         } else {
-                            price = try await AlpacaAPIClient.shared.fetchStockPrice(symbol: stock.symbol)
+                            price = try await AlpacaAPIClient.shared.fetchStockPrice(symbol: symbol)
                         }
-                        return (stock.symbol, price)
+                        return (symbol, price)
                     } catch {
-                        return (stock.symbol, nil)
+                        return (symbol, nil)
                     }
                 }
             }
