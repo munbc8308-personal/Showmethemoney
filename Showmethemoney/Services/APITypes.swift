@@ -52,6 +52,23 @@ enum ChartPeriod: String, CaseIterable {
     }
 }
 
+enum BacktestPeriod: String, CaseIterable {
+    case sixMonths = "6개월"
+    case oneYear = "1년"
+    case twoYears = "2년"
+    case threeYears = "3년"
+
+    var startDate: Date {
+        let cal = Calendar.current
+        switch self {
+        case .sixMonths:  return cal.date(byAdding: .month, value: -6, to: Date()) ?? Date()
+        case .oneYear:    return cal.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        case .twoYears:   return cal.date(byAdding: .year, value: -2, to: Date()) ?? Date()
+        case .threeYears: return cal.date(byAdding: .year, value: -3, to: Date()) ?? Date()
+        }
+    }
+}
+
 struct AccountBalance {
     let cash: Double
     let totalValue: Double

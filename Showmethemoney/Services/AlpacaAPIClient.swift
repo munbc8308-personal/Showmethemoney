@@ -104,14 +104,22 @@ final class AlpacaAPIClient {
 
     // MARK: - 일봉 데이터 (차트용)
 
+    func fetchDailyBars(symbol: String, startDate: Date) async throws -> [OHLCV] {
+        return try await fetchBarsFrom(symbol: symbol, startDate: startDate)
+    }
+
     func fetchDailyBars(symbol: String, period: ChartPeriod) async throws -> [OHLCV] {
+        return try await fetchBarsFrom(symbol: symbol, startDate: period.startDate)
+    }
+
+    private func fetchBarsFrom(symbol: String, startDate: Date) async throws -> [OHLCV] {
         guard let credential = APICredentialManager.shared.load(for: .alpaca) else {
             throw APIError.missingCredential
         }
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
-        let startStr = formatter.string(from: period.startDate)
+        let startStr = formatter.string(from: startDate)
         let endStr = formatter.string(from: Date())
 
         var components = URLComponents(string: "\(dataURL)/stocks/\(symbol)/bars")!

@@ -144,6 +144,67 @@ final class KISAPIClient {
         return AccountBalance(cash: cash, totalValue: total, currency: .krw)
     }
 
+    func fetchDailyBars(symbol: String, startDate: Date) async throws -> [OHLCV] {
+        let period = ChartPeriod.oneYear
+        let days = Calendar.current.dateComponents([.day], from: startDate, to: Date()).day ?? 365
+        let fakePeriod: ChartPeriod = days <= 30 ? .oneMonth : days <= 90 ? .threeMonths : days <= 180 ? .sixMonths : .oneYear
+        _ = fakePeriod
+        return try await fetchDailyBarsFromDate(symbol: symbol, startDate: startDate)
+    }
+
+    private func fetchDailyBarsFromDate(symbol: String, startDate: Date) async throws -> [OHLCV] {
+        let token = try await validToken()
+        guard let credential = APICredentialManager.shared.load(for: .kis) else {
+            throw APIError.missingCredential
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        let endDate = formatter.string(from: Date())
+        let startDateStr = formatter.string(from: startDate)
+
+        var components = URLComponents(string: "\(baseURL)/uapi/domestic-stock/v1/quotations/inquire-daily-price")!
+        components.queryItems = [
+            URLQueryItem(name: "FID_COND_MRKT_DIV_CODE", value: "J"),
+            URLQueryItem(name: "FID_INPUT_ISCD", value: symbol),
+            URLQueryItem(name: "FID_PERIOD_DIV_CODE", value: "D"),
+            URLQueryItem(name: "FID_ORG_ADJ_PRC", value: "0"),
+            URLQueryItem(name: "FID_INPUT_DATE_1", value: startDateStr),
+            URLQueryItem(name: "FID_INPUT_DATE_2", value: endDate)
+        ]
+
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(credential.appKey, forHTTPHeaderField: "appkey")
+        request.setValue(credential.appSecret, forHTTPHeaderField: "appsecret")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("FHKST01010400", forHTTPHeaderField: "tr_id")
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response)
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let outputs = json["output2"] as? [[String: Any]]
+        else { throw APIError.parseError }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd"
+
+        return outputs.compactMap { item -> OHLCV? in
+            guard let dateStr = item["stck_bsop_date"] as? String,
+                  let date = dateFormatter.date(from: dateStr),
+                  let openStr = item["stck_oprc"] as? String, let open = Double(openStr),
+                  let highStr = item["stck_hgpr"] as? String, let high = Double(highStr),
+                  let lowStr = item["stck_lwpr"] as? String, let low = Double(lowStr),
+                  let closeStr = item["stck_clpr"] as? String, let close = Double(closeStr),
+                  let volStr = item["acml_vol"] as? String, let volume = Int(volStr)
+            else { return nil }
+            return OHLCV(date: date, open: open, high: high, low: low, close: close, volume: volume)
+        }
+        .sorted { $0.date < $1.date }
+    }
+
     // MARK: - 주문
 
     func placeOrder(symbol: String, type: TradeType, quantity: Int, price: Double? = nil) async throws -> String {

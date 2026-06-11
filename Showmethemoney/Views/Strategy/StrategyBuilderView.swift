@@ -15,6 +15,7 @@ struct StrategyBuilderView: View {
             symbolSection
             buyConditionsSection
             sellConditionsSection
+            backtestSection
         }
         .navigationTitle(strategy.name)
         #if os(iOS)
@@ -22,6 +23,19 @@ struct StrategyBuilderView: View {
         #endif
         .sheet(isPresented: $showAddCondition) {
             AddConditionView(strategy: strategy, isBuyCondition: addingBuyCondition)
+        }
+    }
+
+    private var backtestSection: some View {
+        Section {
+            NavigationLink(destination: BacktestView(strategy: strategy)) {
+                Label("백테스팅 실행", systemImage: "chart.line.uptrend.xyaxis.circle")
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("백테스팅")
+        } footer: {
+            Text("과거 데이터로 전략 성과를 시뮬레이션합니다")
         }
     }
 
