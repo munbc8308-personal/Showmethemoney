@@ -4,6 +4,8 @@ import SwiftData
 struct WatchlistView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Stock.addedAt, order: .reverse) private var stocks: [Stock]
+    @State private var prices: [String: StockPrice] = [:]
+    @State private var isRefreshing = false
     @State private var showAddStock = false
 
     var body: some View {
@@ -17,7 +19,9 @@ struct WatchlistView: View {
                     )
                 } else {
                     ForEach(stocks) { stock in
-                        stockRow(stock)
+                        NavigationLink(destination: StockDetailView(stock: stock)) {
+                            stockRow(stock)
+                        }
                     }
                     .onDelete(perform: deleteStocks)
                 }
@@ -29,16 +33,31 @@ struct WatchlistView: View {
                         Image(systemName: "plus")
                     }
                 }
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        Task { await refreshAllPrices() }
+                    } label: {
+                        if isRefreshing {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(isRefreshing)
+                }
             }
+            .refreshable { await refreshAllPrices() }
             .sheet(isPresented: $showAddStock) {
                 AddStockView()
             }
+            .task { await refreshAllPrices() }
         }
     }
 
     private func stockRow(_ stock: Stock) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
+        let price = prices[stock.symbol]
+        return HStack {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(stock.symbol)
                     .font(.subheadline.bold())
                 Text(stock.name)
@@ -46,18 +65,57 @@ struct WatchlistView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text(stock.market.rawValue)
-                .font(.caption)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(.blue.opacity(0.15), in: Capsule())
-                .foregroundStyle(.blue)
+            if let price {
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(price.currency.symbol)\(price.price, specifier: "%.0f")")
+                        .font(.subheadline.bold())
+                    HStack(spacing: 2) {
+                        Image(systemName: price.isPositive ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                            .font(.system(size: 8))
+                        Text(String(format: "%.2f%%", abs(price.changeRate)))
+                            .font(.caption)
+                    }
+                    .foregroundStyle(price.isPositive ? .red : .blue)
+                }
+            } else {
+                ProgressView().scaleEffect(0.7)
+            }
         }
+        .padding(.vertical, 2)
     }
 
     private func deleteStocks(at offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(stocks[index])
+        }
+    }
+
+    private func refreshAllPrices() async {
+        guard !stocks.isEmpty else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+
+        await withTaskGroup(of: (String, StockPrice?).self) { group in
+            for stock in stocks {
+                group.addTask {
+                    do {
+                        let price: StockPrice
+                        if stock.market.isKorean {
+                            price = try await KISAPIClient.shared.fetchStockPrice(symbol: stock.symbol)
+                        } else {
+                            price = try await AlpacaAPIClient.shared.fetchStockPrice(symbol: stock.symbol)
+                        }
+                        return (stock.symbol, price)
+                    } catch {
+                        return (stock.symbol, nil)
+                    }
+                }
+            }
+            for await (symbol, price) in group {
+                if let price {
+                    prices[symbol] = price
+                }
+            }
         }
     }
 }

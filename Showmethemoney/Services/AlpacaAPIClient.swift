@@ -102,6 +102,56 @@ final class AlpacaAPIClient {
         return orderId
     }
 
+    // MARK: - 일봉 데이터 (차트용)
+
+    func fetchDailyBars(symbol: String, period: ChartPeriod) async throws -> [OHLCV] {
+        guard let credential = APICredentialManager.shared.load(for: .alpaca) else {
+            throw APIError.missingCredential
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let startStr = formatter.string(from: period.startDate)
+        let endStr = formatter.string(from: Date())
+
+        var components = URLComponents(string: "\(dataURL)/stocks/\(symbol)/bars")!
+        components.queryItems = [
+            URLQueryItem(name: "timeframe", value: "1Day"),
+            URLQueryItem(name: "start", value: startStr),
+            URLQueryItem(name: "end", value: endStr),
+            URLQueryItem(name: "limit", value: "1000"),
+            URLQueryItem(name: "adjustment", value: "raw")
+        ]
+
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "GET"
+        request.setValue(credential.appKey, forHTTPHeaderField: "APCA-API-KEY-ID")
+        request.setValue(credential.appSecret, forHTTPHeaderField: "APCA-API-SECRET-KEY")
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response)
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let bars = json["bars"] as? [[String: Any]]
+        else { throw APIError.parseError }
+
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime]
+
+        return bars.compactMap { bar -> OHLCV? in
+            guard let timeStr = bar["t"] as? String,
+                  let date = dateFormatter.date(from: timeStr),
+                  let open = bar["o"] as? Double,
+                  let high = bar["h"] as? Double,
+                  let low = bar["l"] as? Double,
+                  let close = bar["c"] as? Double,
+                  let volume = bar["v"] as? Double
+            else { return nil }
+            return OHLCV(date: date, open: open, high: high, low: low, close: close, volume: Int(volume))
+        }
+        .sorted { $0.date < $1.date }
+    }
+
     // MARK: - Helpers
 
     private func validateResponse(_ response: URLResponse) throws {
