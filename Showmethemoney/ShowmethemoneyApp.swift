@@ -1,10 +1,3 @@
-//
-//  ShowmethemoneyApp.swift
-//  Showmethemoney
-//
-//  Created by 문병천 on 6/10/26.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -12,14 +5,31 @@ import SwiftData
 struct ShowmethemoneyApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Stock.self,
+            Strategy.self,
+            Condition.self,
+            Trade.self,
+            Holding.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        // CloudKit 동기화 활성화 방법:
+        // 1. Xcode → Signing & Capabilities → + → iCloud 추가
+        // 2. CloudKit 체크박스 활성화 후 컨테이너 ID 지정
+        // 3. 아래 localConfig 대신 cloudConfig 사용
+
+        let localConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        // CloudKit 활성화 후 교체:
+        // let cloudConfig = ModelConfiguration(
+        //     schema: schema,
+        //     isStoredInMemoryOnly: false,
+        //     cloudKitDatabase: .automatic
+        // )
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [localConfig])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            fatalError("ModelContainer 생성 실패: \(error)")
         }
     }()
 
