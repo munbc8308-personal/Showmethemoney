@@ -12,6 +12,7 @@ struct DashboardView: View {
                     portfolioSummarySection
                     holdingsSection
                     recentTradesSection
+                    analyticsLink
                 }
                 .padding()
             }
@@ -143,6 +144,22 @@ struct DashboardView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var analyticsLink: some View {
+        NavigationLink(destination: AnalyticsView()) {
+            HStack {
+                Label("성과 분석", systemImage: "chart.bar.xaxis")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.orange)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
     }
 
     private func emptyStateView(message: String) -> some View {

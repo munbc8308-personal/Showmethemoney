@@ -235,12 +235,12 @@ Timer (60초)
 
 ## 개발 단계
 
-- [ ] Phase 1: 기본 인프라 — 데이터 모델, CloudKit 동기화, API 클라이언트, Keychain 인증
-- [ ] Phase 2: 시세 조회 — 국내/해외 실시간 시세, 캔들 차트
-- [ ] Phase 3: 전략 빌더 — 조건 설계 UI, 지표 계산 엔진 (RSI, MA, MACD, 볼린저 등)
-- [ ] Phase 4: 백테스팅 — 과거 데이터 수집, 시뮬레이션 엔진, 성과 지표 계산
-- [ ] Phase 5: 자동매매 — macOS 타이머 기반 주문 실행, 리스크 관리, 알림
-- [ ] Phase 6: 성과 분석 — 수익률 통계, 전략 비교, 리포트
+- [x] Phase 1: 기본 인프라 — 데이터 모델(Stock/Strategy/Condition/Trade/Holding), API 클라이언트(KIS/Alpaca), Keychain 인증
+- [x] Phase 2: 시세 조회 — 국내/해외 실시간 시세, 라인 차트(Swift Charts), 관심종목 관리
+- [x] Phase 3: 전략 빌더 — 조건 설계 UI(AND 결합), IndicatorEngine(MA/EMA/RSI/MACD/볼린저/ADX), StrategyEngine
+- [x] Phase 4: 백테스팅 — BacktestEngine(손익/MDD/샤프비율/승률/손익비), 수익 커브 차트
+- [x] Phase 5: 자동매매 — AutoTradingService(60초 루프, 장 시간 체크, 손절/익절, Push Notification)
+- [x] Phase 6: 성과 분석 — AnalyticsView(누적 손익 커브, 월별 손익, 전략별 성과 비교, 전체 거래 내역)
 
 ---
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct ShowmethemoneyApp: App {
@@ -36,7 +37,18 @@ struct ShowmethemoneyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task { await setupServices() }
         }
         .modelContainer(sharedModelContainer)
+        .environment(AutoTradingService.shared)
+    }
+
+    @MainActor
+    private func setupServices() async {
+        #if os(macOS)
+        AutoTradingService.shared.configure(container: sharedModelContainer)
+        try? await UNUserNotificationCenter.current()
+            .requestAuthorization(options: [.alert, .sound, .badge])
+        #endif
     }
 }
